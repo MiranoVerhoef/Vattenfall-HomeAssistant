@@ -1,6 +1,4 @@
-# Vattenfall Dynamic Prices
-
-##1.1.0
+# Vattenfall Dynamic Prices 1.2.0
 
 Unofficial Home Assistant HACS integration for Vattenfall dynamic electricity and gas prices.
 
@@ -36,3 +34,7 @@ Options:
 ## Notes
 
 This integration depends on Vattenfall's public website/API structure and can break if they change it.
+
+## 1.2.0
+
+- Added bundled brand icon/logo assets for Home Assistant 2026.3+.
