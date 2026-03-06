@@ -11,6 +11,7 @@ from . import VattenfallConfigEntry
 from .const import (
     ATTR_CURRENT_AT,
     ATTR_FORECAST,
+    ATTR_FORECAST_BLOCKS,
     ATTR_FORECAST_COUNT,
     ATTR_FORECAST_LINES,
     ATTR_FORECAST_TEXT,
@@ -155,7 +156,7 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
 
         if self.entity_description.is_forecast:
             forecast = block.get("forecast_24h") or []
-            return f"{len(forecast)} uren" if forecast else None
+            return f"{len(forecast)} blokken" if forecast else None
 
         return block.get(self.entity_description.metric)
 
@@ -174,6 +175,7 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
             forecast = block.get("forecast_24h") or []
             lines = [item.get("display") for item in forecast if item.get("display")]
             attrs[ATTR_FORECAST] = forecast
+            attrs[ATTR_FORECAST_BLOCKS] = forecast
             attrs[ATTR_FORECAST_COUNT] = len(forecast)
             attrs[ATTR_FORECAST_AVAILABLE_HOURS] = len(forecast)
             attrs[ATTR_FORECAST_LINES] = lines
