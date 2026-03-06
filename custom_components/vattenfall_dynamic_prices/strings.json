@@ -1,0 +1,39 @@
+{
+  "title": "Vattenfall Dynamic Prices",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Vattenfall Dynamic Prices",
+        "description": "Add Vattenfall dynamic price sensors directly in Home Assistant.",
+        "data": {
+          "enable_flex": "Enable FlexPrijs sensors",
+          "enable_beurs": "Enable Beursprijs sensors",
+          "scan_interval": "Refresh interval in seconds"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
+      "select_at_least_one": "Enable at least one sensor group."
+    },
+    "abort": {
+      "single_instance_allowed": "Only one Vattenfall Dynamic Prices integration can be configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Vattenfall Dynamic Prices",
+        "data": {
+          "enable_flex": "Enable FlexPrijs sensors",
+          "enable_beurs": "Enable Beursprijs sensors",
+          "scan_interval": "Refresh interval in seconds"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
+      "select_at_least_one": "Enable at least one sensor group."
+    }
+  }
+}
