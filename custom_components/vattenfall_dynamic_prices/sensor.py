@@ -156,7 +156,21 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
 
         if self.entity_description.is_forecast:
             forecast = block.get("forecast_24h") or []
-            return f"{len(forecast)} blokken" if forecast else None
+            if not forecast:
+                return None
+
+            current_block = next((item for item in forecast if item.get("is_current")), None)
+            active_block = current_block or forecast[0]
+
+            period = active_block.get("period")
+            display_value = active_block.get("display_value")
+
+            if period and display_value:
+                return f"{period} {display_value}"
+            if active_block.get("display"):
+                return active_block["display"]
+
+            return None
 
         return block.get(self.entity_description.metric)
 

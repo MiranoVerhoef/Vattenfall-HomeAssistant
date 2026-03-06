@@ -110,3 +110,7 @@ content: |
 - Added color-coded 24-hour forecast blocks
 - Forecast sensors now expose `forecast_blocks`
 - Added ready-to-use block card examples to the README
+
+## 2.0.1
+
+- Forecast sensor state now shows the active/current block, for example `17:00-18:00 0,35`, instead of `24 blokken`.
