@@ -12,6 +12,8 @@ from .const import (
     ATTR_CURRENT_AT,
     ATTR_FORECAST,
     ATTR_FORECAST_COUNT,
+    ATTR_FORECAST_LINES,
+    ATTR_FORECAST_TEXT,
     ATTR_LAST_REFRESH,
     ATTR_LOW_AT,
     ATTR_PEAK_AT,
@@ -59,7 +61,6 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
         section="electricity",
         mode="flex",
         metric="current",
-        suggested_unit_of_measurement="€/kWh",
         is_forecast=True,
     ),
     VattenfallSensorDescription(
@@ -100,7 +101,6 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
         section="electricity",
         mode="beurs",
         metric="current",
-        suggested_unit_of_measurement="€/kWh",
         is_forecast=True,
     ),
     VattenfallSensorDescription(
@@ -144,11 +144,18 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_unit_of_measurement(self) -> str | None:
+        if self.entity_description.is_forecast:
+            return None
         return self.entity_description.suggested_unit_of_measurement
 
     @property
     def native_value(self) -> Any:
         block = self._data_block()
+
+        if self.entity_description.is_forecast:
+            forecast = block.get("forecast_24h") or []
+            return forecast[0]["display"] if forecast else None
+
         return block.get(self.entity_description.metric)
 
     @property
@@ -164,8 +171,11 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
 
         if self.entity_description.is_forecast:
             forecast = block.get("forecast_24h") or []
+            lines = [item.get("display") for item in forecast if item.get("display")]
             attrs[ATTR_FORECAST] = forecast
             attrs[ATTR_FORECAST_COUNT] = len(forecast)
+            attrs[ATTR_FORECAST_LINES] = lines
+            attrs[ATTR_FORECAST_TEXT] = "\n".join(lines)
 
         return attrs
 

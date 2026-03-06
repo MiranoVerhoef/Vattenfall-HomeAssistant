@@ -1,6 +1,15 @@
-# Vattenfall Dynamic Prices 1.2.0
+# Vattenfall Dynamic Prices
 
 Unofficial Home Assistant HACS integration for Vattenfall dynamic electricity and gas prices.
+
+## Repository URL to copy
+
+```text
+https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant
+```
+
+Add this repository in **HACS → Integrations → 3 dots → Custom repositories**  
+Choose category: **Integration**
 
 ## Features
 
@@ -23,18 +32,38 @@ Options:
 - Enable Beursprijs sensors
 - Set refresh interval
 
+## Security hardening
+
+- HTTPS-only URL validation
+- Embedded credentials blocked in URLs
+- No redirect following for discovery/API calls
+- Discovery restricted to expected Vattenfall domains
+- Private and non-public IP targets blocked to reduce SSRF risk
+- In-memory discovery caching with retry on failure
+
 ## Install
 
-1. Add this repository to HACS as **Integration**
-2. Install it
-3. Restart Home Assistant
-4. Go to **Settings → Devices & services**
-5. Add **Vattenfall Dynamic Prices**
+1. Open **HACS**
+2. Open **Integrations**
+3. Click the **3 dots** in the top right
+4. Click **Custom repositories**
+5. Paste this URL:
+
+   `https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant`
+
+6. Set category to **Integration**
+7. Click **Add**
+8. Search for **Vattenfall Dynamic Prices**
+9. Install it
+10. Restart Home Assistant
+11. Go to **Settings → Devices & services**
+12. Add **Vattenfall Dynamic Prices**
 
 ## Notes
 
 This integration depends on Vattenfall's public website/API structure and can break if they change it.
 
-## 1.2.0
+## 1.3.0
 
-- Added bundled brand icon/logo assets for Home Assistant 2026.3+.
+- Version bump to 1.3.0
+- Added a clear copy-paste repository URL in the install instructions
