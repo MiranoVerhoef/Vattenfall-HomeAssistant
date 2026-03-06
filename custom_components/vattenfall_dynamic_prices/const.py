@@ -19,3 +19,4 @@ ATTR_FORECAST_COUNT = "forecast_count"
 
 ATTR_FORECAST_LINES = "forecast_lines"
 ATTR_FORECAST_TEXT = "forecast_text"
+ATTR_FORECAST_AVAILABLE_HOURS = "forecast_available_hours"

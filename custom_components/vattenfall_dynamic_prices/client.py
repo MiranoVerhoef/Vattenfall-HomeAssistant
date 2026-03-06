@@ -350,6 +350,35 @@ class VattenfallClient:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         return parsed.astimezone(TZ) if parsed.tzinfo else parsed.replace(tzinfo=TZ)
 
+    def _forecast_window(
+        self,
+        series: list[tuple[datetime, datetime, float]],
+        now: datetime,
+    ) -> list[dict[str, Any]]:
+        points: list[dict[str, Any]] = []
+
+        current_and_future = [
+            (start, end, value)
+            for start, end, value in series
+            if end > now
+        ]
+
+        for start, end, value in current_and_future[:24]:
+            period = f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+            display_value = f"{value:.2f}".replace(".", ",")
+            points.append(
+                {
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "period": period,
+                    "value": value,
+                    "display_value": display_value,
+                    "display": f"{period} {display_value}",
+                }
+            )
+
+        return points
+
     def _series_stats(
         self,
         series: list[tuple[datetime, datetime, float]],
@@ -369,8 +398,8 @@ class VattenfallClient:
         }
 
         if include_day_range:
-            window_end = now + timedelta(hours=24)
-            future = [(value, start) for start, end, value in series if start >= now and start < window_end]
+            forecast_window = self._forecast_window(series, now)
+            future = [(item["value"], datetime.fromisoformat(item["start"])) for item in forecast_window]
 
             peak = max(future, default=None, key=lambda item: item[0])
             low = min(future, default=None, key=lambda item: item[0])
@@ -392,23 +421,7 @@ class VattenfallClient:
         now: datetime,
         unit: str,
     ) -> list[dict[str, Any]]:
-        window_end = now + timedelta(hours=24)
-        points: list[dict[str, Any]] = []
-
-        for start, end, value in series:
-            if start >= now and start < window_end:
-                period = f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
-                display_value = f"{value:.2f}".replace(".", ",")
-                points.append(
-                    {
-                        "start": start.isoformat(),
-                        "end": end.isoformat(),
-                        "period": period,
-                        "value": value,
-                        "display_value": display_value,
-                        "display": f"{period} {display_value}",
-                        "unit": unit,
-                    }
-                )
-
+        points = self._forecast_window(series, now)
+        for point in points:
+            point["unit"] = unit
         return points

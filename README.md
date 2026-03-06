@@ -67,3 +67,9 @@ This integration depends on Vattenfall's public website/API structure and can br
 
 - Version bump to 1.3.0
 - Added a clear copy-paste repository URL in the install instructions
+
+## 1.4.0
+
+- Forecast sensors now include the current active hour plus the next available hours, up to 24 slots.
+- Forecast sensor state now shows how many hours are available, while the full 24-hour list is exposed in attributes.
+- `forecast_lines` and `forecast_text` now contain the full readable overview like `16:00-17:00 0,29`.
