@@ -1,43 +1,45 @@
-# Vattenfall Dynamic Prices for Home Assistant
+# Vattenfall Dynamic Prices
 
-Unofficial **HACS-only** Home Assistant integration for Vattenfall NL dynamic prices.
-
-This integration fetches the public Vattenfall dynamic pricing data directly inside Home Assistant, so there is **no separate Docker container** to run.
+Unofficial Home Assistant HACS integration for Vattenfall dynamic prices.
 
 ## What it adds
 
 For both **Stroom** and **Gas**:
-
 - Current price
-- Peak price for the next 24 hours
-- Lowest price for the next 24 hours
+- Peak 24 hours price
+- Lowest 24 hours price
 
-You can enable or disable:
+Options:
+- Enable or disable **FlexPrijs** sensors
+- Enable or disable **Beursprijs** sensors
+- Set refresh interval
 
-- **FlexPrijs** sensors
-- **Beursprijs** sensors
+## Install
 
-## Install with HACS
-
-1. Upload this repo to GitHub.
-2. In Home Assistant go to **HACS → Integrations → Custom repositories**.
-3. Add your GitHub repo as category **Integration**.
-4. Install **Vattenfall Dynamic Prices**.
-5. Restart Home Assistant.
-6. Go to **Settings → Devices & services → Add integration**.
-7. Search for **Vattenfall Dynamic Prices** and complete setup.
+1. Add this repo to **HACS** as an **Integration**
+2. Install **Vattenfall Dynamic Prices**
+3. Restart Home Assistant
+4. Go to **Settings → Devices & services → Add integration**
+5. Search for **Vattenfall Dynamic Prices**
 
 ## Notes
 
-- Electricity prices are hourly.
-- Gas prices are daily, and Vattenfall states the gas day runs from **06:00 to 06:00**.
-- The integration uses the public Vattenfall dynamic contract page to discover the current backend API and then reads the tariff data from there.
-- This is an unofficial integration. Vattenfall can change the page or API at any time.
+- This integration uses Vattenfall's public dynamic pricing webpage to discover the current backend API details.
+- Vattenfall can change the site or API at any time.
+- If setup fails, check **Settings → System → Logs → Home Assistant Core → Show raw logs**
 
-## Options
+## Logging help
 
-After setup, open the integration and use **Configure** to change:
+To make debugging easier, you can add this to `configuration.yaml`:
 
-- Refresh interval
-- Enable FlexPrijs sensors
-- Enable Beursprijs sensors
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.vattenfall_dynamic_prices: debug
+```
+
+## Repo
+
+Documentation: https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant
+Issues: https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant/issues
