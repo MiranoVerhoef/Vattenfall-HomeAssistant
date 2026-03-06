@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urljoin
+from zoneinfo import ZoneInfo
 
-from aiohttp import ClientError
-from dateutil import parser as dtparser
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import httpx
 
-from .const import DEFAULT_BEURS_TYPE_CONTAINS, DEFAULT_SCRAPE_URL
+from .const import SCRAPE_URL
 
 _LOGGER = logging.getLogger(__name__)
+
+TZ = ZoneInfo("Europe/Amsterdam")
 
 RE_BASE = re.compile(r'dynamicTariffsBaseApiURL:"(?P<url>[^"]+)"')
 RE_KEY = re.compile(r'ocpApimSubscriptionFeaturesDynamicTariffsKey:"(?P<key>[^"]+)"')
@@ -22,242 +21,236 @@ RE_SCRIPT_SRC = re.compile(r'<script[^>]+src="(?P<src>[^"]+)"', re.IGNORECASE)
 
 
 class VattenfallError(Exception):
-    """Base Vattenfall integration error."""
+    """Base integration error."""
 
 
 class VattenfallDiscoveryError(VattenfallError):
-    """Raised when API discovery fails."""
+    """Raised when discovery from the public page fails."""
 
 
 class VattenfallApiError(VattenfallError):
-    """Raised when the API call fails."""
-
-
-@dataclass(slots=True)
-class DiscoveredApi:
-    base_url: str
-    subscription_key: str
+    """Raised when the tariff API call fails."""
 
 
 class VattenfallClient:
-    def __init__(self, hass: HomeAssistant) -> None:
-        self.hass = hass
-        self.session = async_get_clientsession(hass)
-        self.scrape_url = DEFAULT_SCRAPE_URL
-        self.beurs_tokens = DEFAULT_BEURS_TYPE_CONTAINS
+    def __init__(self, http_client: httpx.AsyncClient) -> None:
+        self.client = http_client
 
-    async def async_get_summary(self, *, include_flex: bool, include_beurs: bool) -> dict[str, Any]:
+    async def async_get_summary(
+        self,
+        include_flex: bool,
+        include_beurs: bool,
+    ) -> dict[str, Any]:
         raw = await self.async_fetch_tariffs()
-        return self._compute_summary(raw=raw, include_flex=include_flex, include_beurs=include_beurs)
+        return self._compute_summary(raw, include_flex=include_flex, include_beurs=include_beurs)
 
     async def async_fetch_tariffs(self) -> Any:
-        discovered = await self._async_discover_api()
-        headers = {
-            'ocp-apim-subscription-key': discovered.subscription_key,
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/131.0.0.0 Safari/537.36'
-            ),
-            'Accept': 'application/json, text/plain, */*',
-            'Referer': self.scrape_url,
-        }
-        url = f"{discovered.base_url}/DynamicTariff"
+        base_url, api_key = await self._async_discover_api()
+        url = f"{base_url}/DynamicTariff"
+
+        _LOGGER.debug("Fetching Vattenfall tariffs from discovered endpoint")
 
         try:
-            async with self.session.get(url, headers=headers, timeout=30) as response:
-                text = await response.text()
-                if response.status >= 400:
-                    raise VattenfallApiError(
-                        f'DynamicTariff request failed with HTTP {response.status}: {text[:300]}'
-                    )
-                try:
-                    return await response.json(content_type=None)
-                except Exception as err:
-                    raise VattenfallApiError(
-                        f'DynamicTariff returned non-JSON content: {text[:300]}'
-                    ) from err
-        except ClientError as err:
-            raise VattenfallApiError(f'DynamicTariff request error: {err}') from err
+            response = await self.client.get(
+                url,
+                headers={"ocp-apim-subscription-key": api_key},
+                timeout=30.0,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as err:
+            raise VattenfallApiError(f"Tariff API request error: {err}") from err
 
-    async def _async_discover_api(self) -> DiscoveredApi:
+    async def _async_discover_api(self) -> tuple[str, str]:
         page_headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/131.0.0.0 Safari/537.36'
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0.0.0 Safari/537.36"
             ),
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8',
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
 
+        _LOGGER.debug("Discovering Vattenfall API details from pricing page")
+
         try:
-            async with self.session.get(self.scrape_url, headers=page_headers, timeout=30) as response:
-                html = await response.text()
-                if response.status >= 400:
-                    raise VattenfallDiscoveryError(
-                        f'Pricing page request failed with HTTP {response.status}'
-                    )
-        except ClientError as err:
-            raise VattenfallDiscoveryError(f'Pricing page request error: {err}') from err
+            response = await self.client.get(
+                SCRAPE_URL,
+                headers=page_headers,
+                timeout=30.0,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            html = response.text
+        except Exception as err:
+            raise VattenfallDiscoveryError(f"Pricing page request error: {err}") from err
 
-        inline = self._extract_api_details(html)
-        if inline:
-            _LOGGER.debug('Discovered Vattenfall API details from inline page content')
-            return inline
+        base_url = self._find(RE_BASE, html)
+        api_key = self._find(RE_KEY, html)
+        if base_url and api_key:
+            return base_url.rstrip("/"), api_key
 
-        scripts = [urljoin(self.scrape_url, match.group('src')) for match in RE_SCRIPT_SRC.finditer(html)]
-        _LOGGER.debug('Scanning %s Vattenfall script files for API details', len(scripts))
+        scripts = [urljoin(SCRAPE_URL, match.group("src")) for match in RE_SCRIPT_SRC.finditer(html)]
 
         for script_url in scripts:
             try:
-                async with self.session.get(script_url, headers=page_headers, timeout=30) as response:
-                    script_text = await response.text()
-                    if response.status >= 400:
-                        continue
-            except ClientError:
+                script_response = await self.client.get(
+                    script_url,
+                    headers={"User-Agent": page_headers["User-Agent"]},
+                    timeout=30.0,
+                    follow_redirects=True,
+                )
+                script_response.raise_for_status()
+                js = script_response.text
+            except Exception as err:
+                _LOGGER.debug("Skipping script %s due to error: %s", script_url, err)
                 continue
 
-            discovered = self._extract_api_details(script_text)
-            if discovered:
-                _LOGGER.debug('Discovered Vattenfall API details in script: %s', script_url)
-                return discovered
+            base_url = self._find(RE_BASE, js)
+            api_key = self._find(RE_KEY, js)
+            if base_url and api_key:
+                return base_url.rstrip("/"), api_key
 
-        raise VattenfallDiscoveryError(
-            'Could not discover the Vattenfall dynamic pricing API details from the public webpage.'
-        )
+        raise VattenfallDiscoveryError("Could not discover the Vattenfall dynamic pricing API details")
 
-    def _extract_api_details(self, text: str) -> DiscoveredApi | None:
-        base_match = RE_BASE.search(text)
-        key_match = RE_KEY.search(text)
-        if not base_match or not key_match:
-            return None
+    def _find(self, regex: re.Pattern[str], text: str) -> str | None:
+        match = regex.search(text)
+        return match.group(1) if match else None
 
-        base_url = base_match.group('url').rstrip('/')
-        subscription_key = key_match.group('key')
-        return DiscoveredApi(base_url=base_url, subscription_key=subscription_key)
+    def _compute_summary(
+        self,
+        raw: Any,
+        *,
+        include_flex: bool,
+        include_beurs: bool,
+    ) -> dict[str, Any]:
+        products = raw if isinstance(raw, list) else raw.get("data") or []
 
-    def _compute_summary(self, *, raw: Any, include_flex: bool, include_beurs: bool) -> dict[str, Any]:
-        products = raw if isinstance(raw, list) else raw.get('data') or []
+        electricity = next((item for item in products if item.get("product") == "E"), None)
+        gas = next((item for item in products if item.get("product") == "G"), None)
 
-        electricity = next((p for p in products if p.get('product') == 'E'), None)
-        gas = next((p for p in products if p.get('product') == 'G'), None)
-
-        now = datetime.now().astimezone()
+        now = datetime.now(TZ)
 
         summary: dict[str, Any] = {
-            'last_update': now.isoformat(),
-            'electricity': {},
-            'gas': {},
+            "last_refresh": now.isoformat(),
+            "electricity": {},
+            "gas": {},
         }
 
         if electricity:
-            summary['electricity'] = self._product_summary(
-                product=electricity,
+            summary["electricity"] = self._product_summary(
+                electricity,
                 now=now,
+                unit="€/kWh",
                 include_flex=include_flex,
                 include_beurs=include_beurs,
-                unit='€/kWh',
             )
 
         if gas:
-            summary['gas'] = self._product_summary(
-                product=gas,
+            summary["gas"] = self._product_summary(
+                gas,
                 now=now,
+                unit="€/m³",
                 include_flex=include_flex,
                 include_beurs=include_beurs,
-                unit='€/m³',
             )
 
         return summary
 
     def _product_summary(
         self,
-        *,
         product: dict[str, Any],
+        *,
         now: datetime,
+        unit: str,
         include_flex: bool,
         include_beurs: bool,
-        unit: str,
     ) -> dict[str, Any]:
-        tariffs = product.get('tariffData') or []
-        data: dict[str, Any] = {}
+        tariffs = product.get("tariffData") or []
+        result: dict[str, Any] = {}
 
         if include_flex:
-            flex_series = self._build_series(tariffs, mode='flex')
-            data['flex'] = self._stats_from_series(flex_series, now)
-            data['flex']['unit'] = unit
+            flex_series = self._series_from_tariffs(tariffs, mode="flex")
+            result["flex"] = self._series_stats(flex_series, now)
+            result["flex"]["unit"] = unit
 
         if include_beurs:
-            beurs_series = self._build_series(tariffs, mode='beurs')
-            data['beurs'] = self._stats_from_series(beurs_series, now)
-            data['beurs']['unit'] = unit
+            beurs_series = self._series_from_tariffs(tariffs, mode="beurs")
+            result["beurs"] = self._series_stats(beurs_series, now)
+            result["beurs"]["unit"] = unit
 
-        return data
+        return result
 
-    def _build_series(self, tariffs: list[dict[str, Any]], *, mode: str) -> list[tuple[datetime, datetime, float]]:
+    def _series_from_tariffs(
+        self,
+        tariffs: list[dict[str, Any]],
+        *,
+        mode: str,
+    ) -> list[tuple[datetime, datetime, float]]:
         series: list[tuple[datetime, datetime, float]] = []
 
-        for tariff in tariffs:
-            start = self._parse_dt(tariff['startTime'])
-            end = self._parse_dt(tariff['endTime'])
+        for item in tariffs:
+            start = self._parse_datetime(item["startTime"])
+            end = self._parse_datetime(item["endTime"])
 
-            if mode == 'flex':
-                value = tariff.get('amountInclVat')
+            if mode == "flex":
+                amount = item.get("amountInclVat")
+                if amount is None:
+                    continue
+                value = float(amount)
+            else:
+                value = self._extract_beurs(item.get("details") or [])
                 if value is None:
                     continue
-                series.append((start, end, float(value)))
-                continue
 
-            beurs_value = self._extract_beurs_value(tariff.get('details') or [])
-            if beurs_value is not None:
-                series.append((start, end, beurs_value))
+            series.append((start, end, float(value)))
 
-        series.sort(key=lambda item: item[0])
+        series.sort(key=lambda row: row[0])
         return series
 
-    def _extract_beurs_value(self, details: list[dict[str, Any]]) -> float | None:
-        matches: list[float] = []
+    def _extract_beurs(self, details: list[dict[str, Any]]) -> float | None:
+        tokens = ("beurs", "spot", "market", "epex", "eex")
+        values: list[float] = []
 
         for detail in details:
-            detail_type = str(detail.get('type') or '').lower()
-            if any(token in detail_type for token in self.beurs_tokens):
-                amount = detail.get('amountInclVat', detail.get('amount'))
+            detail_type = (detail.get("type") or "").lower()
+            if any(token in detail_type for token in tokens):
+                amount = detail.get("amountInclVat", detail.get("amount"))
                 if amount is not None:
-                    matches.append(float(amount))
+                    values.append(float(amount))
 
-        if not matches:
+        if not values:
             return None
 
-        return sum(matches)
+        return sum(values)
 
-    def _stats_from_series(self, series: list[tuple[datetime, datetime, float]], now: datetime) -> dict[str, Any]:
-        current_value: float | None = None
-        current_start: datetime | None = None
+    def _parse_datetime(self, value: str) -> datetime:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.astimezone(TZ) if parsed.tzinfo else parsed.replace(tzinfo=TZ)
 
+    def _series_stats(
+        self,
+        series: list[tuple[datetime, datetime, float]],
+        now: datetime,
+    ) -> dict[str, Any]:
+        current: tuple[float, datetime] | None = None
         for start, end, value in series:
             if start <= now < end:
-                current_value = value
-                current_start = start
+                current = (value, start)
                 break
 
-        end_of_window = now + timedelta(hours=24)
-        upcoming = [(value, start) for start, _, value in series if now <= start < end_of_window]
+        window_end = now + timedelta(hours=24)
+        future = [(value, start) for start, end, value in series if start >= now and start < window_end]
 
-        peak = max(upcoming, default=None, key=lambda item: item[0])
-        low = min(upcoming, default=None, key=lambda item: item[0])
+        peak = max(future, default=None, key=lambda item: item[0])
+        low = min(future, default=None, key=lambda item: item[0])
 
         return {
-            'current': current_value,
-            'current_at': current_start.isoformat() if current_start else None,
-            'peak_24h': peak[0] if peak else None,
-            'peak_at': peak[1].isoformat() if peak else None,
-            'low_24h': low[0] if low else None,
-            'low_at': low[1].isoformat() if low else None,
+            "current": current[0] if current else None,
+            "current_at": current[1].isoformat() if current else None,
+            "peak_24h": peak[0] if peak else None,
+            "peak_at": peak[1].isoformat() if peak else None,
+            "low_24h": low[0] if low else None,
+            "low_at": low[1].isoformat() if low else None,
         }
-
-    def _parse_dt(self, value: str) -> datetime:
-        parsed = dtparser.isoparse(value)
-        if parsed.tzinfo is None:
-            return parsed.astimezone()
-        return parsed.astimezone()

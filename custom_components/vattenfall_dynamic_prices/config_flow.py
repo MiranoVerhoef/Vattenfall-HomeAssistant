@@ -4,6 +4,7 @@ import logging
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.helpers.httpx_client import get_async_client
 
 from .client import VattenfallClient
 from .const import (
@@ -31,7 +32,7 @@ STEP_SCHEMA = vol.Schema(
 
 
 async def _async_validate_input(hass, data: dict) -> None:
-    client = VattenfallClient(hass)
+    client = VattenfallClient(get_async_client(hass))
     await client.async_get_summary(
         include_flex=data[CONF_ENABLE_FLEX],
         include_beurs=data[CONF_ENABLE_BEURS],
@@ -49,21 +50,21 @@ class VattenfallConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             if not user_input[CONF_ENABLE_FLEX] and not user_input[CONF_ENABLE_BEURS]:
-                errors['base'] = 'select_at_least_one'
+                errors["base"] = "select_at_least_one"
             else:
                 try:
                     await _async_validate_input(self.hass, user_input)
                 except Exception:
-                    _LOGGER.exception('Failed to validate Vattenfall integration setup')
-                    errors['base'] = 'cannot_connect'
+                    _LOGGER.exception("Failed to validate Vattenfall integration setup")
+                    errors["base"] = "cannot_connect"
                 else:
                     return self.async_create_entry(
-                        title='Vattenfall Dynamic Prices',
+                        title="Vattenfall Dynamic Prices",
                         data=user_input,
                     )
 
         return self.async_show_form(
-            step_id='user',
+            step_id="user",
             data_schema=STEP_SCHEMA,
             errors=errors,
         )
@@ -82,20 +83,20 @@ class VattenfallOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             if not user_input[CONF_ENABLE_FLEX] and not user_input[CONF_ENABLE_BEURS]:
-                errors['base'] = 'select_at_least_one'
+                errors["base"] = "select_at_least_one"
             else:
                 try:
                     await _async_validate_input(self.hass, user_input)
                 except Exception:
-                    _LOGGER.exception('Failed to validate Vattenfall integration options')
-                    errors['base'] = 'cannot_connect'
+                    _LOGGER.exception("Failed to validate Vattenfall integration options")
+                    errors["base"] = "cannot_connect"
                 else:
-                    return self.async_create_entry(title='', data=user_input)
+                    return self.async_create_entry(title="", data=user_input)
 
-        current = {**self.config_entry.data, **self.config_entry.options}
+        current = self.config_entry.options or self.config_entry.data
 
         return self.async_show_form(
-            step_id='init',
+            step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Optional(

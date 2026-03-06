@@ -1,47 +1,32 @@
 from __future__ import annotations
 
-import logging
 from datetime import timedelta
+from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .client import VattenfallClient, VattenfallError
-from .const import (
-    CONF_ENABLE_BEURS,
-    CONF_ENABLE_FLEX,
-    CONF_SCAN_INTERVAL,
-    DEFAULT_ENABLE_BEURS,
-    DEFAULT_ENABLE_FLEX,
-    DEFAULT_SCAN_INTERVAL,
-)
+from .client import VattenfallClient
+from .const import CONF_ENABLE_BEURS, CONF_ENABLE_FLEX, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
 
 
-class VattenfallDataUpdateCoordinator(DataUpdateCoordinator[dict]):
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self.entry = entry
-        self.client = VattenfallClient(hass)
-
-        config = {**entry.data, **entry.options}
-        interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+class VattenfallDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    def __init__(self, hass, client: VattenfallClient, config: dict[str, Any]) -> None:
+        self.client = client
+        self.config = config
+        scan_interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
 
         super().__init__(
             hass,
-            logger=logging.getLogger(__name__),
-            name='Vattenfall Dynamic Prices',
-            update_interval=timedelta(seconds=interval),
+            logger=__import__("logging").getLogger(__name__),
+            name="Vattenfall Dynamic Prices",
+            update_interval=timedelta(seconds=scan_interval),
         )
 
-    async def _async_update_data(self) -> dict:
-        config = {**self.entry.data, **self.entry.options}
-        include_flex = bool(config.get(CONF_ENABLE_FLEX, DEFAULT_ENABLE_FLEX))
-        include_beurs = bool(config.get(CONF_ENABLE_BEURS, DEFAULT_ENABLE_BEURS))
-
+    async def _async_update_data(self) -> dict[str, Any]:
         try:
             return await self.client.async_get_summary(
-                include_flex=include_flex,
-                include_beurs=include_beurs,
+                include_flex=self.config.get(CONF_ENABLE_FLEX, True),
+                include_beurs=self.config.get(CONF_ENABLE_BEURS, False),
             )
-        except VattenfallError as err:
+        except Exception as err:
             raise UpdateFailed(str(err)) from err

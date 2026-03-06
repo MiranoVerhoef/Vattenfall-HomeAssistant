@@ -1,40 +1,76 @@
 {
   "title": "Vattenfall Dynamic Prices",
   "config": {
+    "error": {
+      "cannot_connect": "Kon Vattenfall prijsgegevens nu niet ophalen.",
+      "select_at_least_one": "Selecteer minimaal \u00e9\u00e9n sensortype."
+    },
     "step": {
       "user": {
-        "title": "Vattenfall Dynamic Prices toevoegen",
+        "title": "Vattenfall Dynamic Prices",
         "description": "Voeg Vattenfall dynamische prijssensoren direct toe in Home Assistant.",
         "data": {
           "enable_flex": "FlexPrijs sensoren inschakelen",
           "enable_beurs": "Beursprijs sensoren inschakelen",
-          "scan_interval": "Verversingsinterval in seconden"
+          "scan_interval": "Verversinterval in seconden"
         }
       }
-    },
-    "error": {
-      "cannot_connect": "Kon Vattenfall prijsdata nu niet ophalen.",
-      "select_at_least_one": "Schakel minimaal \u00e9\u00e9n soort sensor in."
-    },
-    "abort": {
-      "already_configured": "Deze integratie is al geconfigureerd."
     }
   },
   "options": {
+    "error": {
+      "cannot_connect": "Kon Vattenfall prijsgegevens nu niet ophalen.",
+      "select_at_least_one": "Selecteer minimaal \u00e9\u00e9n sensortype."
+    },
     "step": {
       "init": {
         "title": "Vattenfall Dynamic Prices",
-        "description": "Werk de instellingen van de Vattenfall sensoren bij.",
         "data": {
           "enable_flex": "FlexPrijs sensoren inschakelen",
           "enable_beurs": "Beursprijs sensoren inschakelen",
-          "scan_interval": "Verversingsinterval in seconden"
+          "scan_interval": "Verversinterval in seconden"
         }
       }
-    },
-    "error": {
-      "cannot_connect": "Kon Vattenfall prijsdata nu niet ophalen.",
-      "select_at_least_one": "Schakel minimaal \u00e9\u00e9n soort sensor in."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "electricity_flex_current": {
+        "name": "Stroom Flex huidig"
+      },
+      "electricity_flex_peak_24h": {
+        "name": "Stroom Flex piek 24 uur"
+      },
+      "electricity_flex_low_24h": {
+        "name": "Stroom Flex laagste 24 uur"
+      },
+      "gas_flex_current": {
+        "name": "Gas Flex huidig"
+      },
+      "gas_flex_peak_24h": {
+        "name": "Gas Flex piek 24 uur"
+      },
+      "gas_flex_low_24h": {
+        "name": "Gas Flex laagste 24 uur"
+      },
+      "electricity_beurs_current": {
+        "name": "Stroom Beurs huidig"
+      },
+      "electricity_beurs_peak_24h": {
+        "name": "Stroom Beurs piek 24 uur"
+      },
+      "electricity_beurs_low_24h": {
+        "name": "Stroom Beurs laagste 24 uur"
+      },
+      "gas_beurs_current": {
+        "name": "Gas Beurs huidig"
+      },
+      "gas_beurs_peak_24h": {
+        "name": "Gas Beurs piek 24 uur"
+      },
+      "gas_beurs_low_24h": {
+        "name": "Gas Beurs laagste 24 uur"
+      }
     }
   }
 }

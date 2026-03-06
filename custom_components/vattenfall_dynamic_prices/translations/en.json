@@ -1,9 +1,13 @@
 {
   "title": "Vattenfall Dynamic Prices",
   "config": {
+    "error": {
+      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
+      "select_at_least_one": "Select at least one sensor type."
+    },
     "step": {
       "user": {
-        "title": "Add Vattenfall Dynamic Prices",
+        "title": "Vattenfall Dynamic Prices",
         "description": "Add Vattenfall dynamic price sensors directly in Home Assistant.",
         "data": {
           "enable_flex": "Enable FlexPrijs sensors",
@@ -11,30 +15,62 @@
           "scan_interval": "Refresh interval in seconds"
         }
       }
-    },
-    "error": {
-      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
-      "select_at_least_one": "Enable at least one sensor type."
-    },
-    "abort": {
-      "already_configured": "This integration is already configured."
     }
   },
   "options": {
+    "error": {
+      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
+      "select_at_least_one": "Select at least one sensor type."
+    },
     "step": {
       "init": {
         "title": "Vattenfall Dynamic Prices",
-        "description": "Update Vattenfall sensor settings.",
         "data": {
           "enable_flex": "Enable FlexPrijs sensors",
           "enable_beurs": "Enable Beursprijs sensors",
           "scan_interval": "Refresh interval in seconds"
         }
       }
-    },
-    "error": {
-      "cannot_connect": "Could not retrieve Vattenfall price data right now.",
-      "select_at_least_one": "Enable at least one sensor type."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "electricity_flex_current": {
+        "name": "Stroom Flex current"
+      },
+      "electricity_flex_peak_24h": {
+        "name": "Stroom Flex peak 24h"
+      },
+      "electricity_flex_low_24h": {
+        "name": "Stroom Flex lowest 24h"
+      },
+      "gas_flex_current": {
+        "name": "Gas Flex current"
+      },
+      "gas_flex_peak_24h": {
+        "name": "Gas Flex peak 24h"
+      },
+      "gas_flex_low_24h": {
+        "name": "Gas Flex lowest 24h"
+      },
+      "electricity_beurs_current": {
+        "name": "Stroom Beurs current"
+      },
+      "electricity_beurs_peak_24h": {
+        "name": "Stroom Beurs peak 24h"
+      },
+      "electricity_beurs_low_24h": {
+        "name": "Stroom Beurs lowest 24h"
+      },
+      "gas_beurs_current": {
+        "name": "Gas Beurs current"
+      },
+      "gas_beurs_peak_24h": {
+        "name": "Gas Beurs peak 24h"
+      },
+      "gas_beurs_low_24h": {
+        "name": "Gas Beurs lowest 24h"
+      }
     }
   }
 }

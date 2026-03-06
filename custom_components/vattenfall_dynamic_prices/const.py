@@ -8,5 +8,9 @@ DEFAULT_ENABLE_FLEX = True
 DEFAULT_ENABLE_BEURS = False
 DEFAULT_SCAN_INTERVAL = 900
 
-DEFAULT_SCRAPE_URL = "https://www.vattenfall.nl/klantenservice/alles-over-je-dynamische-contract/"
-DEFAULT_BEURS_TYPE_CONTAINS = ("beurs", "spot", "market", "epex", "eex")
+SCRAPE_URL = "https://www.vattenfall.nl/klantenservice/alles-over-je-dynamische-contract/"
+
+ATTR_CURRENT_AT = "current_at"
+ATTR_PEAK_AT = "peak_at"
+ATTR_LOW_AT = "low_at"
+ATTR_LAST_REFRESH = "last_refresh"

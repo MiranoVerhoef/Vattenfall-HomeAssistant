@@ -1,45 +1,32 @@
 # Vattenfall Dynamic Prices
 
-Unofficial Home Assistant HACS integration for Vattenfall dynamic prices.
+Unofficial Home Assistant HACS integration for Vattenfall dynamic electricity and gas prices.
 
-## What it adds
+## Features
 
-For both **Stroom** and **Gas**:
-- Current price
-- Peak 24 hours price
-- Lowest 24 hours price
+Creates sensors for:
+
+- Stroom current price
+- Stroom peak 24h
+- Stroom lowest 24h
+- Gas current price
+- Gas peak 24h
+- Gas lowest 24h
 
 Options:
-- Enable or disable **FlexPrijs** sensors
-- Enable or disable **Beursprijs** sensors
+
+- Enable FlexPrijs sensors
+- Enable Beursprijs sensors
 - Set refresh interval
 
 ## Install
 
-1. Add this repo to **HACS** as an **Integration**
-2. Install **Vattenfall Dynamic Prices**
+1. Add this repository to HACS as **Integration**
+2. Install it
 3. Restart Home Assistant
-4. Go to **Settings → Devices & services → Add integration**
-5. Search for **Vattenfall Dynamic Prices**
+4. Go to **Settings → Devices & services**
+5. Add **Vattenfall Dynamic Prices**
 
 ## Notes
 
-- This integration uses Vattenfall's public dynamic pricing webpage to discover the current backend API details.
-- Vattenfall can change the site or API at any time.
-- If setup fails, check **Settings → System → Logs → Home Assistant Core → Show raw logs**
-
-## Logging help
-
-To make debugging easier, you can add this to `configuration.yaml`:
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.vattenfall_dynamic_prices: debug
-```
-
-## Repo
-
-Documentation: https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant
-Issues: https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant/issues
+This integration depends on Vattenfall's public website/API structure and can break if they change it.
