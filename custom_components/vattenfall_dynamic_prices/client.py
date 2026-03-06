@@ -363,9 +363,15 @@ class VattenfallClient:
             if end > now
         ]
 
-        for start, end, value in current_and_future[:24]:
+        window_rows = current_and_future[:24]
+        values = [value for _, _, value in window_rows]
+
+        for idx, (start, end, value) in enumerate(window_rows):
             period = f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
             display_value = f"{value:.2f}".replace(".", ",")
+            color = self._forecast_color(value, values)
+            text_color = self._forecast_text_color(color)
+
             points.append(
                 {
                     "start": start.isoformat(),
@@ -374,10 +380,31 @@ class VattenfallClient:
                     "value": value,
                     "display_value": display_value,
                     "display": f"{period} {display_value}",
+                    "color": color,
+                    "text_color": text_color,
+                    "is_current": start <= now < end,
+                    "sort_index": idx,
                 }
             )
 
         return points
+
+    def _forecast_color(self, value: float, values: list[float]) -> str:
+        if not values:
+            return "#4caf50"
+
+        low = min(values)
+        high = max(values)
+
+        if high == low:
+            return "#4caf50"
+
+        ratio = (value - low) / (high - low)
+        hue = 120 - (120 * ratio)
+        return f"hsl({int(hue)}, 70%, 45%)"
+
+    def _forecast_text_color(self, color: str) -> str:
+        return "#ffffff"
 
     def _series_stats(
         self,
@@ -424,4 +451,5 @@ class VattenfallClient:
         points = self._forecast_window(series, now)
         for point in points:
             point["unit"] = unit
+            point["price_label"] = f"€ {point['display_value']}"
         return points

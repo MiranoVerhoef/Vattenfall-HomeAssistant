@@ -26,20 +26,7 @@ Creates sensors for:
 - Gas All-in huidig
 - Gas Beurs huidig
 
-Options:
-
-- Enable All-in / FlexPrijs sensors
-- Enable Beursprijs sensors
-- Set refresh interval
-
-## Security hardening
-
-- HTTPS-only URL validation
-- Embedded credentials blocked in URLs
-- No redirect following for discovery/API calls
-- Discovery restricted to expected Vattenfall domains
-- Private and non-public IP targets blocked to reduce SSRF risk
-- In-memory discovery caching with retry on failure
+Forecast sensors now expose color-ready block data for the next 24 hours.
 
 ## Install
 
@@ -59,17 +46,67 @@ Options:
 11. Go to **Settings → Devices & services**
 12. Add **Vattenfall Dynamic Prices**
 
+## 24-hour block card example
+
+This example renders blocks like:
+
+- `17:00-18:00`
+- `18:00-19:00`
+- `19:00-20:00`
+
+with the matching price in each block and a color based on the relative price level.
+
+### All-in blocks
+
+```yaml
+type: markdown
+title: Stroom All-in blokken 24 uur
+content: |
+  {% set blocks = state_attr('sensor.stroom_all_in_forecast_24_uur', 'forecast_blocks') or [] %}
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
+  {% for block in blocks %}
+    <div style="background:{ block.color };color:{ block.text_color };padding:12px;border-radius:12px;">
+      <div style="font-size:13px;font-weight:600;">{{ block.period }}</div>
+      <div style="font-size:18px;font-weight:700;margin-top:4px;">€ {{ block.display_value }}</div>
+    </div>
+  {% endfor %}
+  </div>
+```
+
+### Beurs blocks
+
+```yaml
+type: markdown
+title: Stroom Beurs blokken 24 uur
+content: |
+  {% set blocks = state_attr('sensor.stroom_beurs_forecast_24_uur', 'forecast_blocks') or [] %}
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
+  {% for block in blocks %}
+    <div style="background:{ block.color };color:{ block.text_color };padding:12px;border-radius:12px;">
+      <div style="font-size:13px;font-weight:600;">{{ block.period }}</div>
+      <div style="font-size:18px;font-weight:700;margin-top:4px;">€ {{ block.display_value }}</div>
+    </div>
+  {% endfor %}
+  </div>
+```
+
 ## Notes
 
-This integration depends on Vattenfall's public website/API structure and can break if they change it.
+- Forecast sensors expose:
+  - `forecast_blocks`
+  - `forecast_lines`
+  - `forecast_text`
+  - `forecast_count`
+- `forecast_blocks` includes:
+  - `period`
+  - `display_value`
+  - `price_label`
+  - `color`
+  - `text_color`
+  - `is_current`
 
-## 1.3.0
+## 2.0.0
 
-- Version bump to 1.3.0
-- Added a clear copy-paste repository URL in the install instructions
-
-## 1.4.0
-
-- Forecast sensors now include the current active hour plus the next available hours, up to 24 slots.
-- Forecast sensor state now shows how many hours are available, while the full 24-hour list is exposed in attributes.
-- `forecast_lines` and `forecast_text` now contain the full readable overview like `16:00-17:00 0,29`.
+- Added color-coded 24-hour forecast blocks
+- Forecast sensors now expose `forecast_blocks`
+- Added ready-to-use block card examples to the README
