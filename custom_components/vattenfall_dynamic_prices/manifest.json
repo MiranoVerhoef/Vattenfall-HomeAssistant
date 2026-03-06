@@ -1,0 +1,14 @@
+{
+  "domain": "vattenfall_dynamic_prices",
+  "name": "Vattenfall Dynamic Prices",
+  "version": "0.2.0",
+  "documentation": "https://github.com/MiranoVerhoef/vattenfall-dynamic-prices-hacs",
+  "issue_tracker": "https://github.com/MiranoVerhoef/vattenfall-dynamic-prices-hacs/issues",
+  "codeowners": [
+    "@MiranoVerhoef"
+  ],
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "requirements": []
+}
