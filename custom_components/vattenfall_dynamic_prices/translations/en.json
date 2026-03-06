@@ -10,7 +10,7 @@
         "title": "Vattenfall Dynamic Prices",
         "description": "Add Vattenfall dynamic price sensors directly in Home Assistant.",
         "data": {
-          "enable_flex": "Enable FlexPrijs sensors",
+          "enable_flex": "Enable All-in / FlexPrijs sensors",
           "enable_beurs": "Enable Beursprijs sensors",
           "scan_interval": "Refresh interval in seconds"
         }
@@ -26,7 +26,7 @@
       "init": {
         "title": "Vattenfall Dynamic Prices",
         "data": {
-          "enable_flex": "Enable FlexPrijs sensors",
+          "enable_flex": "Enable All-in / FlexPrijs sensors",
           "enable_beurs": "Enable Beursprijs sensors",
           "scan_interval": "Refresh interval in seconds"
         }
@@ -36,22 +36,22 @@
   "entity": {
     "sensor": {
       "electricity_flex_current": {
-        "name": "Stroom Flex current"
+        "name": "Stroom All-in current"
       },
       "electricity_flex_peak_24h": {
-        "name": "Stroom Flex peak 24h"
+        "name": "Stroom All-in peak 24h"
       },
       "electricity_flex_low_24h": {
-        "name": "Stroom Flex lowest 24h"
+        "name": "Stroom All-in lowest 24h"
       },
       "gas_flex_current": {
-        "name": "Gas Flex current"
+        "name": "Gas All-in current"
       },
       "gas_flex_peak_24h": {
-        "name": "Gas Flex peak 24h"
+        "name": "Gas All-in peak 24h"
       },
       "gas_flex_low_24h": {
-        "name": "Gas Flex lowest 24h"
+        "name": "Gas All-in lowest 24h"
       },
       "electricity_beurs_current": {
         "name": "Stroom Beurs current"

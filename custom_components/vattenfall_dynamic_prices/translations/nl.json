@@ -3,14 +3,14 @@
   "config": {
     "error": {
       "cannot_connect": "Kon Vattenfall prijsgegevens nu niet ophalen.",
-      "select_at_least_one": "Selecteer minimaal \u00e9\u00e9n sensortype."
+      "select_at_least_one": "Selecteer minimaal één sensortype."
     },
     "step": {
       "user": {
         "title": "Vattenfall Dynamic Prices",
         "description": "Voeg Vattenfall dynamische prijssensoren direct toe in Home Assistant.",
         "data": {
-          "enable_flex": "FlexPrijs sensoren inschakelen",
+          "enable_flex": "All-in / FlexPrijs sensoren inschakelen",
           "enable_beurs": "Beursprijs sensoren inschakelen",
           "scan_interval": "Verversinterval in seconden"
         }
@@ -20,13 +20,13 @@
   "options": {
     "error": {
       "cannot_connect": "Kon Vattenfall prijsgegevens nu niet ophalen.",
-      "select_at_least_one": "Selecteer minimaal \u00e9\u00e9n sensortype."
+      "select_at_least_one": "Selecteer minimaal één sensortype."
     },
     "step": {
       "init": {
         "title": "Vattenfall Dynamic Prices",
         "data": {
-          "enable_flex": "FlexPrijs sensoren inschakelen",
+          "enable_flex": "All-in / FlexPrijs sensoren inschakelen",
           "enable_beurs": "Beursprijs sensoren inschakelen",
           "scan_interval": "Verversinterval in seconden"
         }
@@ -36,22 +36,22 @@
   "entity": {
     "sensor": {
       "electricity_flex_current": {
-        "name": "Stroom Flex huidig"
+        "name": "Stroom All-in huidig"
       },
       "electricity_flex_peak_24h": {
-        "name": "Stroom Flex piek 24 uur"
+        "name": "Stroom All-in piek 24 uur"
       },
       "electricity_flex_low_24h": {
-        "name": "Stroom Flex laagste 24 uur"
+        "name": "Stroom All-in laagste 24 uur"
       },
       "gas_flex_current": {
-        "name": "Gas Flex huidig"
+        "name": "Gas All-in huidig"
       },
       "gas_flex_peak_24h": {
-        "name": "Gas Flex piek 24 uur"
+        "name": "Gas All-in piek 24 uur"
       },
       "gas_flex_low_24h": {
-        "name": "Gas Flex laagste 24 uur"
+        "name": "Gas All-in laagste 24 uur"
       },
       "electricity_beurs_current": {
         "name": "Stroom Beurs huidig"

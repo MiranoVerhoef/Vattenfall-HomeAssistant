@@ -1,7 +1,7 @@
 {
   "domain": "vattenfall_dynamic_prices",
   "name": "Vattenfall Dynamic Prices",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "documentation": "https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant",
   "issue_tracker": "https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant/issues",
   "requirements": [],

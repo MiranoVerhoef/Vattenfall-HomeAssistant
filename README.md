@@ -15,7 +15,7 @@ Creates sensors for:
 
 Options:
 
-- Enable FlexPrijs sensors
+- Enable All-in / FlexPrijs sensors
 - Enable Beursprijs sensors
 - Set refresh interval
 
@@ -30,3 +30,7 @@ Options:
 ## Notes
 
 This integration depends on Vattenfall's public website/API structure and can break if they change it.
+
+## v1.0.0
+
+- First stable release.

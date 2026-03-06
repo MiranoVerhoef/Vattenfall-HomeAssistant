@@ -22,6 +22,7 @@ class VattenfallSensorDescription(SensorEntityDescription):
 SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     VattenfallSensorDescription(
         key="electricity_flex_current",
+        name="Stroom All-in huidig",
         translation_key="electricity_flex_current",
         section="electricity",
         mode="flex",
@@ -30,6 +31,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="electricity_flex_peak_24h",
+        name="Stroom All-in piek 24 uur",
         translation_key="electricity_flex_peak_24h",
         section="electricity",
         mode="flex",
@@ -38,6 +40,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="electricity_flex_low_24h",
+        name="Stroom All-in laagste 24 uur",
         translation_key="electricity_flex_low_24h",
         section="electricity",
         mode="flex",
@@ -46,6 +49,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_flex_current",
+        name="Gas All-in huidig",
         translation_key="gas_flex_current",
         section="gas",
         mode="flex",
@@ -54,6 +58,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_flex_peak_24h",
+        name="Gas All-in piek 24 uur",
         translation_key="gas_flex_peak_24h",
         section="gas",
         mode="flex",
@@ -62,6 +67,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_flex_low_24h",
+        name="Gas All-in laagste 24 uur",
         translation_key="gas_flex_low_24h",
         section="gas",
         mode="flex",
@@ -70,6 +76,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="electricity_beurs_current",
+        name="Stroom Beurs huidig",
         translation_key="electricity_beurs_current",
         section="electricity",
         mode="beurs",
@@ -78,6 +85,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="electricity_beurs_peak_24h",
+        name="Stroom Beurs piek 24 uur",
         translation_key="electricity_beurs_peak_24h",
         section="electricity",
         mode="beurs",
@@ -86,6 +94,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="electricity_beurs_low_24h",
+        name="Stroom Beurs laagste 24 uur",
         translation_key="electricity_beurs_low_24h",
         section="electricity",
         mode="beurs",
@@ -94,6 +103,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_beurs_current",
+        name="Gas Beurs huidig",
         translation_key="gas_beurs_current",
         section="gas",
         mode="beurs",
@@ -102,6 +112,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_beurs_peak_24h",
+        name="Gas Beurs piek 24 uur",
         translation_key="gas_beurs_peak_24h",
         section="gas",
         mode="beurs",
@@ -110,6 +121,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
     ),
     VattenfallSensorDescription(
         key="gas_beurs_low_24h",
+        name="Gas Beurs laagste 24 uur",
         translation_key="gas_beurs_low_24h",
         section="gas",
         mode="beurs",
@@ -135,21 +147,18 @@ async def async_setup_entry(hass, entry: VattenfallConfigEntry, async_add_entiti
 
 class VattenfallSensor(CoordinatorEntity, SensorEntity):
     entity_description: VattenfallSensorDescription
-    has_entity_name = True
+    has_entity_name = False
 
     def __init__(self, entry: VattenfallConfigEntry, description: VattenfallSensorDescription) -> None:
         super().__init__(entry.runtime_data.coordinator)
         self.entity_description = description
+        self._attr_name = description.name
         self._attr_unique_id = f"{DOMAIN}_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, DOMAIN)},
             name="Vattenfall Dynamic Prices",
             manufacturer="Vattenfall",
         )
-
-    @property
-    def name(self) -> str | None:
-        return None
 
     @property
     def native_unit_of_measurement(self) -> str | None:
