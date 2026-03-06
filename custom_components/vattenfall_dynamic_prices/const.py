@@ -16,3 +16,6 @@ ATTR_LOW_AT = "low_at"
 ATTR_LAST_REFRESH = "last_refresh"
 ATTR_FORECAST = "forecast"
 ATTR_FORECAST_COUNT = "forecast_count"
+
+ATTR_FORECAST_LINES = "forecast_lines"
+ATTR_FORECAST_TEXT = "forecast_text"

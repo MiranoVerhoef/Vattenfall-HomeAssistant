@@ -397,11 +397,16 @@ class VattenfallClient:
 
         for start, end, value in series:
             if start >= now and start < window_end:
+                period = f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+                display_value = f"{value:.2f}".replace(".", ",")
                 points.append(
                     {
                         "start": start.isoformat(),
                         "end": end.isoformat(),
+                        "period": period,
                         "value": value,
+                        "display_value": display_value,
+                        "display": f"{period} {display_value}",
                         "unit": unit,
                     }
                 )
