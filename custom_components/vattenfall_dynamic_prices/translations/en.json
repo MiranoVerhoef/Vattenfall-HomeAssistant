@@ -32,45 +32,5 @@
         }
       }
     }
-  },
-  "entity": {
-    "sensor": {
-      "electricity_flex_current": {
-        "name": "Stroom All-in current"
-      },
-      "electricity_flex_peak_24h": {
-        "name": "Stroom All-in peak 24h"
-      },
-      "electricity_flex_low_24h": {
-        "name": "Stroom All-in lowest 24h"
-      },
-      "gas_flex_current": {
-        "name": "Gas All-in current"
-      },
-      "gas_flex_peak_24h": {
-        "name": "Gas All-in peak 24h"
-      },
-      "gas_flex_low_24h": {
-        "name": "Gas All-in lowest 24h"
-      },
-      "electricity_beurs_current": {
-        "name": "Stroom Beurs current"
-      },
-      "electricity_beurs_peak_24h": {
-        "name": "Stroom Beurs peak 24h"
-      },
-      "electricity_beurs_low_24h": {
-        "name": "Stroom Beurs lowest 24h"
-      },
-      "gas_beurs_current": {
-        "name": "Gas Beurs current"
-      },
-      "gas_beurs_peak_24h": {
-        "name": "Gas Beurs peak 24h"
-      },
-      "gas_beurs_low_24h": {
-        "name": "Gas Beurs lowest 24h"
-      }
-    }
   }
 }

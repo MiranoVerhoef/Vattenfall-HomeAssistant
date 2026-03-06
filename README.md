@@ -6,18 +6,31 @@ Unofficial Home Assistant HACS integration for Vattenfall dynamic electricity an
 
 Creates sensors for:
 
-- Stroom current price
-- Stroom peak 24h
-- Stroom lowest 24h
-- Gas current price
-- Gas peak 24h
-- Gas lowest 24h
+- Stroom All-in huidig
+- Stroom All-in piek 24 uur
+- Stroom All-in laagste 24 uur
+- Stroom All-in forecast 24 uur
+- Stroom Beurs huidig
+- Stroom Beurs piek 24 uur
+- Stroom Beurs laagste 24 uur
+- Stroom Beurs forecast 24 uur
+- Gas All-in huidig
+- Gas Beurs huidig
 
 Options:
 
 - Enable All-in / FlexPrijs sensors
 - Enable Beursprijs sensors
 - Set refresh interval
+
+## Security hardening in 1.1.0
+
+- Switched to strict HTTPS-only URL validation
+- Blocked embedded credentials in URLs
+- Disabled redirect following for discovery/API requests
+- Restricted discovery page/scripts to expected Vattenfall domains
+- Blocked private and non-public IP targets to reduce SSRF risk
+- Added in-memory discovery caching with retry on failure
 
 ## Install
 
@@ -30,7 +43,3 @@ Options:
 ## Notes
 
 This integration depends on Vattenfall's public website/API structure and can break if they change it.
-
-## v1.0.0
-
-- First stable release.
