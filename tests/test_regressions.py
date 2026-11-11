@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
@@ -166,3 +166,86 @@ class DiscoveryTests(IsolatedAsyncioTestCase):
                 result = await client._async_discover_api()
 
         self.assertEqual(result, ("https://example.com", "example-key"))
+
+
+class ForecastWindowTests(IsolatedAsyncioTestCase):
+    async def _summary_at(self, now, tariffs):
+        client = VattenfallClient(Mock())
+        with (
+            patch.object(client, "async_fetch_tariffs", new=AsyncMock(
+                return_value=[{"product": "E", "tariffData": tariffs}]
+            )),
+            patch.object(integration.client, "datetime", wraps=datetime) as clock,
+        ):
+            clock.now.return_value = now.astimezone(TZ)
+            result = await client.async_get_summary(include_flex=True, include_beurs=True)
+        return result["electricity"]
+
+    @staticmethod
+    def _tariff(start, end, price, *, missing=False):
+        return {
+            "startTime": start.isoformat(),
+            "endTime": end.isoformat(),
+            "amountInclVat": price,
+            "details": [{"type": "PRICE", "amountInclVat": price}],
+            "isMissingPeriod": missing,
+        }
+
+    async def test_quarter_hour_forecast_uses_elapsed_window_for_both_modes(self):
+        start = datetime(2026, 7, 1, 10, tzinfo=UTC)
+        quarter = timedelta(minutes=15)
+        tariffs = [
+            self._tariff(start + i * quarter, start + (i + 1) * quarter, i)
+            for i in range(-1, 98)
+        ]
+
+        for offset, count in ((0, 96), (5, 97)):
+            with self.subTest(offset=offset):
+                summary = await self._summary_at(start + timedelta(minutes=offset), tariffs)
+                for mode in ("flex", "beurs"):
+                    block = summary[mode]
+                    points = block["forecast_24h"]
+                    self.assertEqual(len(points), count)
+                    self.assertEqual(block["forecast_available_hours"], 24)
+                    self.assertEqual(block["current"], 0)
+                    self.assertTrue(points[0]["is_current"])
+                    self.assertEqual(block["low_24h"], points[0]["value"])
+                    self.assertEqual(block["peak_24h"], count - 1)
+                    self.assertEqual(block["peak_at"], points[-1]["start"])
+
+    async def test_fall_back_keeps_the_two_offset_aware_hours_distinct(self):
+        first = datetime(2026, 10, 25, 0, tzinfo=UTC)
+        hour = timedelta(hours=1)
+        tariffs = [
+            self._tariff(first + hour, first + 2 * hour, 2),
+            self._tariff(first, first + hour, 1),
+        ]
+
+        for offset, expected in ((0, 1), (1, 2)):
+            with self.subTest(offset=offset):
+                now = first + offset * hour + timedelta(minutes=30)
+                block = (await self._summary_at(now, tariffs))["flex"]
+                points = block["forecast_24h"]
+                self.assertEqual(block["current"], expected)
+                self.assertEqual(block["current_at"], now.astimezone(TZ).replace(minute=0).isoformat())
+                self.assertEqual([point["value"] for point in points if point["is_current"]], [expected])
+                self.assertEqual(block["forecast_available_hours"], 1.5 - offset)
+
+        first_block = (await self._summary_at(first, tariffs))["flex"]["forecast_24h"]
+        self.assertTrue(first_block[0]["start"].endswith("02:00:00+02:00"))
+        self.assertTrue(first_block[1]["start"].endswith("02:00:00+01:00"))
+
+    async def test_forecast_coverage_excludes_gaps_and_does_not_double_count_overlap(self):
+        now = datetime(2026, 7, 1, 10, tzinfo=UTC)
+        hour = timedelta(hours=1)
+        tariffs = [
+            self._tariff(now - hour, now + hour, 1),
+            self._tariff(now, now + 2 * hour, 2),
+            self._tariff(now + 2 * hour, now + 3 * hour, 99, missing=True),
+            self._tariff(now + 3 * hour, now + 4 * hour, 3),
+        ]
+        block = (await self._summary_at(now, tariffs))["flex"]
+
+        self.assertEqual(len(block["forecast_24h"]), 3)
+        self.assertEqual(block["forecast_available_hours"], 3)
+        self.assertEqual(block["peak_24h"], 3)

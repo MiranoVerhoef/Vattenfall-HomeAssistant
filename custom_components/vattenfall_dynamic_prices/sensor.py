@@ -191,7 +191,7 @@ class VattenfallSensor(CoordinatorEntity, SensorEntity):
             attrs[ATTR_FORECAST] = forecast
             attrs[ATTR_FORECAST_BLOCKS] = forecast
             attrs[ATTR_FORECAST_COUNT] = len(forecast)
-            attrs[ATTR_FORECAST_AVAILABLE_HOURS] = len(forecast)
+            attrs[ATTR_FORECAST_AVAILABLE_HOURS] = block.get(ATTR_FORECAST_AVAILABLE_HOURS, 0)
             attrs[ATTR_FORECAST_LINES] = lines
             attrs[ATTR_FORECAST_TEXT] = "\n".join(lines)
 
