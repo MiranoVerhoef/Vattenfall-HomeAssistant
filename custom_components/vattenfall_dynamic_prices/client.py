@@ -126,8 +126,12 @@ class VattenfallClient:
                 return self._discovery_cache
 
             scripts = [urljoin(SCRAPE_URL, match.group("src")) for match in RE_SCRIPT_SRC.finditer(html)]
+            found_base = bool(base_url)
+            found_key = bool(api_key)
+            scripts_read = 0
+            _LOGGER.debug("Pricing page loaded with %d script references", len(scripts))
 
-            for script_url in scripts:
+            for index, script_url in enumerate(scripts, start=1):
                 try:
                     await self._async_validate_url(
                         script_url,
@@ -142,18 +146,30 @@ class VattenfallClient:
                     )
                     script_response.raise_for_status()
                     js = script_response.text
+                except httpx.HTTPStatusError as err:
+                    _LOGGER.debug("Pricing script %d returned HTTP %d", index, err.response.status_code)
+                    continue
                 except Exception as err:
-                    _LOGGER.debug("Skipping script %s due to error: %s", script_url, err)
+                    _LOGGER.debug("Skipping pricing script %d (%s)", index, type(err).__name__)
                     continue
 
+                scripts_read += 1
                 base_url = self._find(RE_BASE, js)
                 api_key = self._find(RE_KEY, js)
+                found_base |= bool(base_url)
+                found_key |= bool(api_key)
                 if base_url and api_key:
                     await self._async_validate_url(base_url, allow_public_host_only=True)
                     self._discovery_cache = (base_url.rstrip("/"), api_key)
                     return self._discovery_cache
 
-            raise VattenfallDiscoveryError("Could not discover the Vattenfall dynamic pricing API details")
+            raise VattenfallDiscoveryError(
+                "Could not discover the Vattenfall dynamic pricing API details. "
+                f"Read {scripts_read} of {len(scripts)} pricing scripts. "
+                f"API URL found: {'yes' if found_base else 'no'}. "
+                f"Subscription key found: {'yes' if found_key else 'no'}. "
+                "Both values must appear in the same document."
+            )
 
     async def _async_validate_url(
         self,

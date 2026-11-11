@@ -90,6 +90,13 @@ content: |
   </div>
 ```
 
+## Troubleshooting
+
+If setup reports that it could not discover the pricing API, include the full
+discovery error when reporting the issue. It shows how many scripts were read
+and whether the API URL and subscription key were found. Enable debug logging
+for the integration to see HTTP status codes for failed script requests.
+
 ## Notes
 
 - Forecast sensors expose:
