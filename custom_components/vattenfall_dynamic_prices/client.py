@@ -331,6 +331,13 @@ class VattenfallClient:
         return series
 
     def _extract_beurs(self, details: list[dict[str, Any]]) -> float | None:
+        # Vattenfall publishes the exchange price as a separate PRICE component.
+        for detail in details:
+            if (detail.get("type") or "").upper() == "PRICE":
+                amount = detail.get("amountInclVat", detail.get("amount"))
+                if amount is not None:
+                    return float(amount)
+
         tokens = ("beurs", "spot", "market", "epex", "eex")
         values: list[float] = []
 
