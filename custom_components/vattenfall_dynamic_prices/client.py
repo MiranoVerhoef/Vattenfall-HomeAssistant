@@ -6,13 +6,15 @@ import logging
 import socket
 import re
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 from zoneinfo import ZoneInfo
 
-import httpx
-
 from .const import SCRAPE_URL
+
+if TYPE_CHECKING:
+    import httpx
+    import httpx2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ class VattenfallApiError(VattenfallError):
 
 
 class VattenfallClient:
-    def __init__(self, http_client: httpx.AsyncClient) -> None:
+    def __init__(self, http_client: httpx.AsyncClient | httpx2.AsyncClient) -> None:
         self.client = http_client
         self._discovery_cache: tuple[str, str] | None = None
         self._discovery_lock = asyncio.Lock()
@@ -126,8 +128,12 @@ class VattenfallClient:
                 return self._discovery_cache
 
             scripts = [urljoin(SCRAPE_URL, match.group("src")) for match in RE_SCRIPT_SRC.finditer(html)]
+            found_base = bool(base_url)
+            found_key = bool(api_key)
+            scripts_read = 0
+            _LOGGER.debug("Pricing page loaded with %d script references", len(scripts))
 
-            for script_url in scripts:
+            for index, script_url in enumerate(scripts, start=1):
                 try:
                     await self._async_validate_url(
                         script_url,
@@ -140,20 +146,33 @@ class VattenfallClient:
                         timeout=30.0,
                         follow_redirects=False,
                     )
-                    script_response.raise_for_status()
+                    if not script_response.is_success:
+                        _LOGGER.debug(
+                            "Pricing script %d returned HTTP %d", index, script_response.status_code
+                        )
+                        continue
                     js = script_response.text
                 except Exception as err:
-                    _LOGGER.debug("Skipping script %s due to error: %s", script_url, err)
+                    _LOGGER.debug("Skipping pricing script %d (%s)", index, type(err).__name__)
                     continue
 
+                scripts_read += 1
                 base_url = self._find(RE_BASE, js)
                 api_key = self._find(RE_KEY, js)
+                found_base |= bool(base_url)
+                found_key |= bool(api_key)
                 if base_url and api_key:
                     await self._async_validate_url(base_url, allow_public_host_only=True)
                     self._discovery_cache = (base_url.rstrip("/"), api_key)
                     return self._discovery_cache
 
-            raise VattenfallDiscoveryError("Could not discover the Vattenfall dynamic pricing API details")
+            raise VattenfallDiscoveryError(
+                "Could not discover the Vattenfall dynamic pricing API details. "
+                f"Read {scripts_read} of {len(scripts)} pricing scripts. "
+                f"API URL found: {'yes' if found_base else 'no'}. "
+                f"Subscription key found: {'yes' if found_key else 'no'}. "
+                "Both values must appear in the same document."
+            )
 
     async def _async_validate_url(
         self,

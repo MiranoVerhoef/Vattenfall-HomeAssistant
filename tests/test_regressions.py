@@ -5,9 +5,20 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.data_entry_flow import FlowResultType
 
+try:
+    import httpx2 as httpx
+except ModuleNotFoundError:
+    import httpx
+
 from custom_components import vattenfall_dynamic_prices as integration
 from custom_components.vattenfall_dynamic_prices import config_flow
-from custom_components.vattenfall_dynamic_prices.client import TZ, VattenfallApiError, VattenfallClient
+from custom_components.vattenfall_dynamic_prices.client import (
+    TZ,
+    VattenfallApiError,
+    VattenfallClient,
+    VattenfallDiscoveryError,
+)
+from custom_components.vattenfall_dynamic_prices.const import SCRAPE_URL
 
 
 class OptionsFlowTests(IsolatedAsyncioTestCase):
@@ -106,3 +117,52 @@ class BeursPriceTests(IsolatedAsyncioTestCase):
 
             summary["electricity"]["beurs"] = {"current": 0.0}
             await config_flow._async_validate_input(hass, options)
+
+
+class DiscoveryTests(IsolatedAsyncioTestCase):
+    async def test_failed_discovery_reports_script_counts_without_key_value(self):
+        def respond(request):
+            if request.url == httpx.URL(SCRAPE_URL):
+                return httpx.Response(200, text=(
+                    '<script src="/first.js"></script>'
+                    '<script src="/second.js?token=example-query"></script>'
+                ))
+            if request.url.path == "/first.js":
+                return httpx.Response(200, text=(
+                    'ocpApimSubscriptionFeaturesDynamicTariffsKey:"example-key"'
+                ))
+            return httpx.Response(403)
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+            client = VattenfallClient(http)
+            with (
+                patch.object(client, "_async_validate_url", new_callable=AsyncMock),
+                self.assertLogs(integration.client.__name__, level="DEBUG") as logs,
+                self.assertRaises(VattenfallDiscoveryError) as error,
+            ):
+                await client._async_discover_api()
+
+        message = str(error.exception)
+        self.assertIn("Read 1 of 2 pricing scripts", message)
+        self.assertIn("API URL found: no", message)
+        self.assertIn("Subscription key found: yes", message)
+        output = "\n".join(logs.output)
+        self.assertIn("Pricing script 2 returned HTTP 403", output)
+        self.assertNotIn("example-key", message + output)
+        self.assertNotIn("example-query", message + output)
+
+    async def test_discovery_still_uses_details_from_a_matching_script(self):
+        def respond(request):
+            if request.url == httpx.URL(SCRAPE_URL):
+                return httpx.Response(200, text='<script src="/prices.js"></script>')
+            return httpx.Response(200, text=(
+                'dynamicTariffsBaseApiURL:"https://example.com/" '
+                'ocpApimSubscriptionFeaturesDynamicTariffsKey:"example-key"'
+            ))
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+            client = VattenfallClient(http)
+            with patch.object(client, "_async_validate_url", new_callable=AsyncMock):
+                result = await client._async_discover_api()
+
+        self.assertEqual(result, ("https://example.com", "example-key"))
