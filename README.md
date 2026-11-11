@@ -5,7 +5,7 @@ Unofficial Home Assistant HACS integration for Vattenfall dynamic electricity an
 ## Repository URL to copy
 
 ```text
-https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant
+https://github.com/MiranoVerhoef/Vattenfall-HomeAssistant
 ```
 
 Add this repository in **HACS → Integrations → 3 dots → Custom repositories**  
@@ -36,7 +36,7 @@ Forecast sensors now expose color-ready block data for the next 24 hours.
 4. Click **Custom repositories**
 5. Paste this URL:
 
-   `https://github.com/MiranoVerhoef/Vattenfal-HomeAssistant`
+   `https://github.com/MiranoVerhoef/Vattenfall-HomeAssistant`
 
 6. Set category to **Integration**
 7. Click **Add**
@@ -46,48 +46,70 @@ Forecast sensors now expose color-ready block data for the next 24 hours.
 11. Go to **Settings → Devices & services**
 12. Add **Vattenfall Dynamic Prices**
 
-## 24-hour block card example
+## Upgrade from a commit-based HACS install
 
-This example renders blocks like:
+If HACS says **Up-to-date** but shows a commit SHA under **Installed version**
+and a newer tagged release under **Latest version**, switch to a tagged release
+once. This can happen when an integration publishes its first GitHub release.
 
-- `17:00-18:00`
-- `18:00-19:00`
-- `19:00-20:00`
+1. Open **HACS → Vattenfall Dynamic Prices → ⋮ → Install another version**.
+2. Select the latest tagged version and install it.
+3. Restart Home Assistant and confirm **Installed version** shows the version number.
 
-with the matching price in each block and a color based on the relative price level.
+## Enable Beurs sensors
 
-### All-in blocks
+All-in sensors are enabled by default. To add Beurs sensors, go to
+**Settings → Devices & services → Integrations → Vattenfall Dynamic Prices → Configure**,
+enable **Beursprijs**, and save. Leave All-in enabled if you want both groups.
+
+## 24-hour forecast card examples
+
+Add either example as a **Markdown** card. If you renamed a forecast sensor,
+replace the entity ID in the example with the one in your installation. Colors
+show how each price compares with the other available prices in the forecast.
+
+### All-in
 
 ```yaml
 type: markdown
-title: Stroom All-in blokken 24 uur
+title: Stroom All-in forecast 24 uur
 content: |
   {% set blocks = state_attr('sensor.stroom_all_in_forecast_24_uur', 'forecast_blocks') or [] %}
-  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
-  {% for block in blocks %}
-    <div style="background:{ block.color };color:{ block.text_color };padding:12px;border-radius:12px;">
-      <div style="font-size:13px;font-weight:600;">{{ block.period }}</div>
-      <div style="font-size:18px;font-weight:700;margin-top:4px;">€ {{ block.display_value }}</div>
-    </div>
+  {% if blocks %}
+  {% set prices = blocks | map(attribute='value') | list %}
+  {% set low = prices | min %}
+  {% set spread = (prices | max) - low %}
+  | Periode | Prijs (€/kWh) | Niveau |
+  | --- | ---: | --- |
+  {% for block in blocks -%}
+  {% set relative = (block.value - low) / spread if spread else 0 -%}
+  | {{ block.period }} | {{ block.display_value }} | {{ '🟢 Laag' if relative < 1/3 else '🟡 Gemiddeld' if relative < 2/3 else '🔴 Hoog' }} |
   {% endfor %}
-  </div>
+  {% else %}
+  Geen prijsverwachting beschikbaar.
+  {% endif %}
 ```
 
-### Beurs blocks
+### Beurs
 
 ```yaml
 type: markdown
-title: Stroom Beurs blokken 24 uur
+title: Stroom Beurs forecast 24 uur
 content: |
   {% set blocks = state_attr('sensor.stroom_beurs_forecast_24_uur', 'forecast_blocks') or [] %}
-  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;">
-  {% for block in blocks %}
-    <div style="background:{ block.color };color:{ block.text_color };padding:12px;border-radius:12px;">
-      <div style="font-size:13px;font-weight:600;">{{ block.period }}</div>
-      <div style="font-size:18px;font-weight:700;margin-top:4px;">€ {{ block.display_value }}</div>
-    </div>
+  {% if blocks %}
+  {% set prices = blocks | map(attribute='value') | list %}
+  {% set low = prices | min %}
+  {% set spread = (prices | max) - low %}
+  | Periode | Prijs (€/kWh) | Niveau |
+  | --- | ---: | --- |
+  {% for block in blocks -%}
+  {% set relative = (block.value - low) / spread if spread else 0 -%}
+  | {{ block.period }} | {{ block.display_value }} | {{ '🟢 Laag' if relative < 1/3 else '🟡 Gemiddeld' if relative < 2/3 else '🔴 Hoog' }} |
   {% endfor %}
-  </div>
+  {% else %}
+  Geen prijsverwachting beschikbaar.
+  {% endif %}
 ```
 
 ## Troubleshooting
