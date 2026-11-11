@@ -5,7 +5,7 @@ import ipaddress
 import logging
 import socket
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 from zoneinfo import ZoneInfo
@@ -298,27 +298,14 @@ class VattenfallClient:
         tariffs = product.get("tariffData") or []
         result: dict[str, Any] = {}
 
-        if include_flex:
-            flex_series = self._series_from_tariffs(tariffs, mode="flex")
-            result["flex"] = self._series_stats(
-                flex_series,
-                now,
-                include_day_range=product_kind == "electricity",
-            )
-            result["flex"]["unit"] = unit
-            if product_kind == "electricity":
-                result["flex"]["forecast_24h"] = self._forecast_24h(flex_series, now, unit)
-
-        if include_beurs:
-            beurs_series = self._series_from_tariffs(tariffs, mode="beurs")
-            result["beurs"] = self._series_stats(
-                beurs_series,
-                now,
-                include_day_range=product_kind == "electricity",
-            )
-            result["beurs"]["unit"] = unit
-            if product_kind == "electricity":
-                result["beurs"]["forecast_24h"] = self._forecast_24h(beurs_series, now, unit)
+        for mode, enabled in (("flex", include_flex), ("beurs", include_beurs)):
+            if enabled:
+                result[mode] = self._series_stats(
+                    self._series_from_tariffs(tariffs, mode=mode),
+                    now.astimezone(UTC),
+                    unit=unit,
+                    include_day_range=product_kind == "electricity",
+                )
 
         return result
 
@@ -331,6 +318,8 @@ class VattenfallClient:
         series: list[tuple[datetime, datetime, float]] = []
 
         for item in tariffs:
+            if item.get("isMissingPeriod"):
+                continue
             start = self._parse_datetime(item["startTime"])
             end = self._parse_datetime(item["endTime"])
 
@@ -374,34 +363,42 @@ class VattenfallClient:
 
     def _parse_datetime(self, value: str) -> datetime:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return parsed.astimezone(TZ) if parsed.tzinfo else parsed.replace(tzinfo=TZ)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=TZ)
+        return parsed.astimezone(UTC)
 
     def _forecast_window(
         self,
         series: list[tuple[datetime, datetime, float]],
         now: datetime,
-    ) -> list[dict[str, Any]]:
+        unit: str,
+    ) -> tuple[list[dict[str, Any]], float]:
         points: list[dict[str, Any]] = []
-
-        current_and_future = [
+        window_end = now + timedelta(hours=24)
+        window_rows = [
             (start, end, value)
             for start, end, value in series
-            if end > now
+            if max(start, now) < min(end, window_end)
         ]
-
-        window_rows = current_and_future[:24]
         values = [value for _, _, value in window_rows]
+        covered_until = now
+        covered = timedelta()
 
         for idx, (start, end, value) in enumerate(window_rows):
-            period = f"{start.strftime('%H:%M')}-{end.strftime('%H:%M')}"
+            covered_end = min(end, window_end)
+            covered += max(timedelta(), covered_end - max(start, covered_until))
+            covered_until = max(covered_until, covered_end)
+
+            local_start, local_end = start.astimezone(TZ), end.astimezone(TZ)
+            period = f"{local_start:%H:%M}-{local_end:%H:%M}"
             display_value = f"{value:.2f}".replace(".", ",")
             color = self._forecast_color(value, values)
             text_color = self._forecast_text_color(color)
 
             points.append(
                 {
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
+                    "start": local_start.isoformat(),
+                    "end": local_end.isoformat(),
                     "period": period,
                     "value": value,
                     "display_value": display_value,
@@ -410,10 +407,12 @@ class VattenfallClient:
                     "text_color": text_color,
                     "is_current": start <= now < end,
                     "sort_index": idx,
+                    "unit": unit,
+                    "price_label": f"€ {display_value}",
                 }
             )
 
-        return points
+        return points, covered.total_seconds() / 3600
 
     def _forecast_color(self, value: float, values: list[float]) -> str:
         if not values:
@@ -437,6 +436,7 @@ class VattenfallClient:
         series: list[tuple[datetime, datetime, float]],
         now: datetime,
         *,
+        unit: str,
         include_day_range: bool,
     ) -> dict[str, Any]:
         current: tuple[float, datetime] | None = None
@@ -447,35 +447,24 @@ class VattenfallClient:
 
         result = {
             "current": current[0] if current else None,
-            "current_at": current[1].isoformat() if current else None,
+            "current_at": current[1].astimezone(TZ).isoformat() if current else None,
+            "unit": unit,
         }
 
         if include_day_range:
-            forecast_window = self._forecast_window(series, now)
-            future = [(item["value"], datetime.fromisoformat(item["start"])) for item in forecast_window]
-
-            peak = max(future, default=None, key=lambda item: item[0])
-            low = min(future, default=None, key=lambda item: item[0])
+            forecast, available_hours = self._forecast_window(series, now, unit)
+            peak = max(forecast, default=None, key=lambda item: item["value"])
+            low = min(forecast, default=None, key=lambda item: item["value"])
 
             result.update(
                 {
-                    "peak_24h": peak[0] if peak else None,
-                    "peak_at": peak[1].isoformat() if peak else None,
-                    "low_24h": low[0] if low else None,
-                    "low_at": low[1].isoformat() if low else None,
+                    "forecast_24h": forecast,
+                    "forecast_available_hours": available_hours,
+                    "peak_24h": peak["value"] if peak else None,
+                    "peak_at": peak["start"] if peak else None,
+                    "low_24h": low["value"] if low else None,
+                    "low_at": low["start"] if low else None,
                 }
             )
 
         return result
-
-    def _forecast_24h(
-        self,
-        series: list[tuple[datetime, datetime, float]],
-        now: datetime,
-        unit: str,
-    ) -> list[dict[str, Any]]:
-        points = self._forecast_window(series, now)
-        for point in points:
-            point["unit"] = unit
-            point["price_label"] = f"€ {point['display_value']}"
-        return points

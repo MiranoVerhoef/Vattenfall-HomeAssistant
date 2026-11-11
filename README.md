@@ -99,11 +99,15 @@ for the integration to see HTTP status codes for failed script requests.
 
 ## Notes
 
+- The forecast includes tariff blocks that overlap the next 24 elapsed hours,
+  starting with the active block when available. Block timestamps retain their
+  published boundaries.
 - Forecast sensors expose:
   - `forecast_blocks`
   - `forecast_lines`
   - `forecast_text`
-  - `forecast_count`
+  - `forecast_count` (number of tariff blocks)
+  - `forecast_available_hours` (hours covered by available prices within the window)
 - `forecast_blocks` includes:
   - `period`
   - `display_value`
