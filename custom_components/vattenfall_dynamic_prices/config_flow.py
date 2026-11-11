@@ -6,7 +6,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.httpx_client import get_async_client
 
-from .client import VattenfallClient
+from .client import VattenfallApiError, VattenfallClient
 from .const import (
     CONF_ENABLE_BEURS,
     CONF_ENABLE_FLEX,
@@ -33,10 +33,20 @@ STEP_SCHEMA = vol.Schema(
 
 async def _async_validate_input(hass, data: dict) -> None:
     client = VattenfallClient(get_async_client(hass))
-    await client.async_get_summary(
+    summary = await client.async_get_summary(
         include_flex=data[CONF_ENABLE_FLEX],
         include_beurs=data[CONF_ENABLE_BEURS],
     )
+
+    for mode, enabled in (
+        ("flex", data[CONF_ENABLE_FLEX]),
+        ("beurs", data[CONF_ENABLE_BEURS]),
+    ):
+        if enabled and not any(
+            summary[product].get(mode, {}).get("current") is not None
+            for product in ("electricity", "gas")
+        ):
+            raise VattenfallApiError(f"No current tariff for {mode}")
 
 
 class VattenfallConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -76,7 +86,7 @@ class VattenfallConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class VattenfallOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry) -> None:
-        self.config_entry = config_entry
+        self._entry = config_entry
 
     async def async_step_init(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
@@ -93,7 +103,7 @@ class VattenfallOptionsFlow(config_entries.OptionsFlow):
                 else:
                     return self.async_create_entry(title="", data=user_input)
 
-        current = self.config_entry.options or self.config_entry.data
+        current = {**self._entry.data, **self._entry.options}
 
         return self.async_show_form(
             step_id="init",

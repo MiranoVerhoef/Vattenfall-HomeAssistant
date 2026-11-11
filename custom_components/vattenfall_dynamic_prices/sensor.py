@@ -117,7 +117,7 @@ SENSOR_DESCRIPTIONS: tuple[VattenfallSensorDescription, ...] = (
 
 
 async def async_setup_entry(hass, entry: VattenfallConfigEntry, async_add_entities) -> None:
-    config = entry.options or entry.data
+    config = {**entry.data, **entry.options}
 
     entities = [
         VattenfallSensor(entry, description)
