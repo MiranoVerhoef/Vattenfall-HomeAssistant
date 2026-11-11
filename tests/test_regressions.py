@@ -3,8 +3,12 @@ from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
 from homeassistant.data_entry_flow import FlowResultType
+
+try:
+    import httpx2 as httpx
+except ModuleNotFoundError:
+    import httpx
 
 from custom_components import vattenfall_dynamic_prices as integration
 from custom_components.vattenfall_dynamic_prices import config_flow

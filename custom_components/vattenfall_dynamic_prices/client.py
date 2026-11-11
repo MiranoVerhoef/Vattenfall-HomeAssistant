@@ -6,13 +6,15 @@ import logging
 import socket
 import re
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 from zoneinfo import ZoneInfo
 
-import httpx
-
 from .const import SCRAPE_URL
+
+if TYPE_CHECKING:
+    import httpx
+    import httpx2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ class VattenfallApiError(VattenfallError):
 
 
 class VattenfallClient:
-    def __init__(self, http_client: httpx.AsyncClient) -> None:
+    def __init__(self, http_client: httpx.AsyncClient | httpx2.AsyncClient) -> None:
         self.client = http_client
         self._discovery_cache: tuple[str, str] | None = None
         self._discovery_lock = asyncio.Lock()
@@ -144,11 +146,12 @@ class VattenfallClient:
                         timeout=30.0,
                         follow_redirects=False,
                     )
-                    script_response.raise_for_status()
+                    if not script_response.is_success:
+                        _LOGGER.debug(
+                            "Pricing script %d returned HTTP %d", index, script_response.status_code
+                        )
+                        continue
                     js = script_response.text
-                except httpx.HTTPStatusError as err:
-                    _LOGGER.debug("Pricing script %d returned HTTP %d", index, err.response.status_code)
-                    continue
                 except Exception as err:
                     _LOGGER.debug("Skipping pricing script %d (%s)", index, type(err).__name__)
                     continue
