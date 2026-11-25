@@ -20,8 +20,11 @@ _LOGGER = logging.getLogger(__name__)
 
 TZ = ZoneInfo("Europe/Amsterdam")
 
-RE_BASE = re.compile(r'dynamicTariffsBaseApiURL:"(?P<url>[^"]+)"')
-RE_KEY = re.compile(r'ocpApimSubscriptionFeaturesDynamicTariffsKey:"(?P<key>[^"]+)"')
+# The public pricing widget reads these values from Vattenfall's site bundle. The
+# older dynamicTariffs settings are still in that bundle but their API is disabled.
+RE_BASE = re.compile(r'cepTouchPointBaseUrl:"(?P<url>[^"]+)"')
+RE_KEY = re.compile(r'cepTouchPointSubscriptionKey:"(?P<key>[^"]+)"')
+TARIFF_PATH = "/consumptions/v1/DynamicTariff"
 RE_SCRIPT_SRC = re.compile(r'<script[^>]+src="(?P<src>[^"]+)"', re.IGNORECASE)
 
 ALLOWED_PAGE_HOSTS = {"www.vattenfall.nl", "vattenfall.nl"}
@@ -68,7 +71,7 @@ class VattenfallClient:
     async def _async_request_tariffs(self, base_url: str, api_key: str) -> Any:
         await self._async_validate_url(base_url, allow_public_host_only=True)
 
-        url = f"{base_url.rstrip('/')}/DynamicTariff"
+        url = f"{base_url.rstrip('/')}{TARIFF_PATH}"
         _LOGGER.debug("Fetching Vattenfall tariffs from discovered endpoint")
 
         try:

@@ -129,7 +129,7 @@ class DiscoveryTests(IsolatedAsyncioTestCase):
                 ))
             if request.url.path == "/first.js":
                 return httpx.Response(200, text=(
-                    'ocpApimSubscriptionFeaturesDynamicTariffsKey:"example-key"'
+                    'cepTouchPointSubscriptionKey:"example-key"'
                 ))
             return httpx.Response(403)
 
@@ -156,8 +156,8 @@ class DiscoveryTests(IsolatedAsyncioTestCase):
             if request.url == httpx.URL(SCRAPE_URL):
                 return httpx.Response(200, text='<script src="/prices.js"></script>')
             return httpx.Response(200, text=(
-                'dynamicTariffsBaseApiURL:"https://example.com/" '
-                'ocpApimSubscriptionFeaturesDynamicTariffsKey:"example-key"'
+                'cepTouchPointBaseUrl:"https://example.com/" '
+                'cepTouchPointSubscriptionKey:"example-key"'
             ))
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
@@ -166,6 +166,32 @@ class DiscoveryTests(IsolatedAsyncioTestCase):
                 result = await client._async_discover_api()
 
         self.assertEqual(result, ("https://example.com", "example-key"))
+
+    async def test_tariffs_are_requested_from_the_touch_point_endpoint(self):
+        requests = []
+
+        def respond(request):
+            if request.url == httpx.URL(SCRAPE_URL):
+                return httpx.Response(200, text=(
+                    'dynamicTariffsBaseApiURL:"https://api.example.com/dynamic-tariff-prd/api/v1",'
+                    'ocpApimSubscriptionFeaturesDynamicTariffsKey:"old-key",'
+                    'cepTouchPointBaseUrl:"https://api.example.com/api/vfnl",'
+                    'cepTouchPointSubscriptionKey:"new-key"'
+                ))
+            requests.append(request)
+            return httpx.Response(200, json=[])
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+            client = VattenfallClient(http)
+            with patch.object(client, "_async_validate_url", new_callable=AsyncMock):
+                self.assertEqual(await client.async_fetch_tariffs(), [])
+
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(
+            str(requests[0].url),
+            "https://api.example.com/api/vfnl/consumptions/v1/DynamicTariff",
+        )
+        self.assertEqual(requests[0].headers["ocp-apim-subscription-key"], "new-key")
 
 
 class ForecastWindowTests(IsolatedAsyncioTestCase):
